@@ -87,10 +87,15 @@ CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O1 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer
 CFLAGS += -std=gnu99
 CFLAGS += -static
-CFLAGS += -Wall -Wno-format -Wno-unused -Werror -ggdb3 -m32
+CFLAGS += -Wall -Wno-format -Wno-unused -Werror -m32
 # -fno-tree-ch prevented gcc from sometimes reordering read_ebp() before
 # mon_backtrace()'s function prologue on gcc version: (Debian 4.7.2-5) 4.7.2
 CFLAGS += -fno-tree-ch
+
+##################################################
+#ADDED DEBUGGING SYMBOLS FLAG
+CFLAGS += -gstabs
+##################################################
 
 # Add -fno-stack-protector if the option exists.
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
@@ -120,8 +125,8 @@ all:
 	   $(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/net/%.o \
 	   $(OBJDIR)/user/%.o
 
-KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -ggdb3
-USER_CFLAGS := $(CFLAGS) -DJOS_USER -ggdb3
+KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL
+USER_CFLAGS := $(CFLAGS) -DJOS_USER
 
 # Update .vars.X if variable X has changed since the last make run.
 #
