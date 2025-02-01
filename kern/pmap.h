@@ -9,6 +9,11 @@
 #include <inc/memlayout.h>
 #include <inc/assert.h>
 
+//Extra Credit
+void show_mappings(uintptr_t start, uintptr_t end);
+int set_page_permissions(uintptr_t va, int new_perm);
+void dump_memory(uintptr_t addr, size_t size, int is_physical);
+
 extern char bootstacktop[], bootstack[];
 
 extern struct PageInfo *pages;
