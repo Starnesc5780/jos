@@ -161,13 +161,14 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.  Use memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
-
+	pages = (struct PageInfo *) boot_alloc(npages * sizeof(struct PageInfo));
+	memset(pages, 0, npages * sizeof(struct PageInfo));
 
 	//////////////////////////////////////////////////////////////////////
 	// Make 'envs' point to an array of size 'NENV' of 'struct Env'.
 	// LAB 3: Your code here.
-	pages = (struct PageInfo *) boot_alloc(npages * sizeof(struct PageInfo));
-	memset(pages, 0, npages * sizeof(struct PageInfo));
+	envs = (struct Env *) boot_alloc(NENV * sizeof(struct Env));
+	// memset(envs, 0, NENV * sizeof(struct Env));
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -191,7 +192,7 @@ mem_init(void)
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
-
+	boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), PADDR(pages), PTE_U | PTE_P);
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
 	// (ie. perm = PTE_U | PTE_P).
@@ -199,8 +200,7 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
-
-	boot_map_region(kern_pgdir, UPAGES, npages * sizeof(struct PageInfo), PADDR(pages), PTE_U | PTE_P);
+	boot_map_region(kern_pgdir, UENVS, PTSIZE, PADDR(envs), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -617,7 +617,42 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
 
-	return 0;
+	//check if address range is entirely below ULIM
+    if ((uintptr_t)va >= ULIM || (uintptr_t)va + len > ULIM) {
+
+        user_mem_check_addr = (uintptr_t)va;
+        return -E_FAULT;
+    }
+
+    //handle potential overflow case
+    if ((uintptr_t)va + len < (uintptr_t)va) {
+
+        user_mem_check_addr = (uintptr_t)va;
+        return -E_FAULT;
+    }
+
+    char *start = (char*)ROUNDDOWN((uintptr_t)va, PGSIZE);
+    char *end = (char*)ROUNDUP((uintptr_t)va + len, PGSIZE);
+
+    //check each page in the range
+    for (char *addr = start; addr < end; addr += PGSIZE) {
+
+        pte_t *pte = pgdir_walk(env->env_pgdir, addr, 0);
+        
+        if (!pte || !(*pte & PTE_P) || (*pte & perm) != perm) {
+
+            //set the failing address to the first byte that failed
+            //using direct comparison instead of MAX macro
+            user_mem_check_addr = (uintptr_t)((addr < (char*)va) ? va : addr);
+
+            if (user_mem_check_addr >= (uintptr_t)va + len)
+                user_mem_check_addr = (uintptr_t)va + len - 1;
+			
+            return -E_FAULT;
+        }
+    }
+    
+    return 0;
 }
 
 //

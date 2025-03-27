@@ -32,6 +32,7 @@ static struct Command commands[] = {
     { "showmappings", "Display page mappings in a given range", mon_showmappings },
     { "setperm", "Set new permissions for a virtual page", mon_setperm },
     { "dumpmem", "Dump memory contents from virtual or physical addresses", mon_dumpmem },
+	{ "si", "Step over next instruction", mon_si},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -152,8 +153,6 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
     return 0;
 }
 
-
-
 int
 mon_show(int argc, char **argv, struct Trapframe *tf)
 {
@@ -173,6 +172,17 @@ mon_show(int argc, char **argv, struct Trapframe *tf)
     cprintf("%s|   |%s\n", yellow, reset);
     cprintf("%s|___|%s\n", magenta, reset);
 	return 0;
+}
+
+int
+mon_si(int argc, char **argv, struct Trapframe *tf)
+{
+    if (!tf) {
+        cprintf("Invalid Trapframe\n");
+        return 0;
+    }
+    tf->tf_eflags |= FL_TF; //set trap flag
+    return -1;
 }
 
 /***** Kernel monitor command interpreter *****/
