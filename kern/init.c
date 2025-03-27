@@ -17,6 +17,11 @@
 
 static void boot_aps(void);
 
+// Set up the sysenter MSRs (code segment, stack pointer, and EIP)
+// #include <inc/x86.h>
+// wrmsr(IA32_SYSENTER_CS, KERNEL_CS);
+// wrmsr(IA32_SYSENTER_ESP, &sysenter_handler);
+// wrmsr(IA32_SYSENTER_EIP, &syscall_handler);
 
 void
 i386_init(void)

@@ -3,6 +3,38 @@
 #include <inc/syscall.h>
 #include <inc/lib.h>
 
+// static inline int32_t
+// syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
+// {
+//     int32_t ret;
+
+//     // Generic system call: pass system call number in EAX,
+//     // up to five parameters in EDX, ECX, EBX, EDI, ESI.
+//     // Use sysenter instruction to make the system call.
+//     //
+//     // The "volatile" tells the assembler not to optimize
+//     // this instruction away just because we don't use
+//     // the return value.
+//     //
+//     // The last clause tells the assembler that this can
+//     // potentially change the condition codes and arbitrary
+//     // memory locations.
+//     //
+//     // SYSENTER will jump to the kernel directly and pass control there.
+
+//     asm volatile (
+//         "sysenter" // Use sysenter instruction to transition to kernel mode
+//         : "=a" (ret) // Return value in EAX
+//         : "a" (num), "d" (a1), "c" (a2), "b" (a3), "D" (a4), "S" (a5) 
+//         : "cc", "memory"
+//     );
+
+//     if (check && ret > 0)
+//         panic("syscall %d returned %d (> 0)", num, ret);
+
+//     return ret;
+// }
+
 static inline int32_t
 syscall(int num, int check, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
 {

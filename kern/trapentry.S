@@ -54,9 +54,58 @@
 //          Do something like this if the trap includes an error code..
 // HINT 3 : READ Intel's manual to check if the trap includes an error code
 //          or not...
+TRAPHANDLER_NOEC(t_divide, T_DIVIDE)
+TRAPHANDLER_NOEC(t_debug, T_DEBUG)
+TRAPHANDLER_NOEC(t_nmi, T_NMI)
+TRAPHANDLER_NOEC(t_brkpt, T_BRKPT)
+TRAPHANDLER_NOEC(t_oflow, T_OFLOW)
+TRAPHANDLER_NOEC(t_bound, T_BOUND)
+TRAPHANDLER_NOEC(t_illop, T_ILLOP)
+TRAPHANDLER_NOEC(t_device, T_DEVICE)
+TRAPHANDLER(t_dblflt, T_DBLFLT)
+TRAPHANDLER(t_tss, T_TSS)
+TRAPHANDLER(t_segnp, T_SEGNP)
+TRAPHANDLER(t_stack, T_STACK)
+TRAPHANDLER(t_gpflt, T_GPFLT)
+TRAPHANDLER(t_pgflt, T_PGFLT)
+TRAPHANDLER_NOEC(t_fperr, T_FPERR)
+TRAPHANDLER(t_align, T_ALIGN)
+TRAPHANDLER_NOEC(t_mchk, T_MCHK)
+TRAPHANDLER_NOEC(t_simderr, T_SIMDERR)
+TRAPHANDLER_NOEC(t_syscall, T_SYSCALL)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
+ _alltraps:
+    pushl %ds
+    pushl %es
+    pushal
+    movw $GD_KD, %ax
+    movw %ax, %ds
+    movw %ax, %es
+    pushl %esp
+    call trap
 
+# .global sysenter_handler
+# sysenter_handler:
+#     push %eax                   # Save EAX (system call number)
+#     push %ebx                   # Save EBX (arguments, etc.)
+#     push %ecx
+#     push %edx
 
+#     # Set up the kernel environment for syscall
+#     movl %esp, %eax             # Load the address of the user stack pointer
+#     movl %eax, user_esp         # Save user stack pointer
+#     movl %ebx, %eax             # Pass the arguments to syscall (in %ebx)
+#     call syscall                # Call the syscall function
+
+#     # Restore the state for returning to user space
+#     movl user_esp, %esp         # Restore the user stack pointer
+#     pop %edx                    # Restore the registers
+#     pop %ecx
+#     pop %ebx
+#     pop %eax
+
+#     # Execute sysexit to return to user space
+#     sysexit
