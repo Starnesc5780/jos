@@ -30,7 +30,30 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
 
-	// sched_halt never returns
+	//get the index of the previously running environment
+	int i, start;
+    start = 0;
+    if (curenv)
+        start = ENVX(curenv->env_id) + 1;
+    
+    //search for a runnable environment in circular fashion
+    for (i = 0; i < NENV; i++) {
+
+        int idx = (start + i) % NENV;
+
+        if (envs[idx].env_status == ENV_RUNNABLE) {
+
+            env_run(&envs[idx]);
+            return;
+        }
+    }
+    
+    //if we get here, no environment was runnable
+    if (curenv && curenv->env_status == ENV_RUNNING){
+    	env_run(curenv);
+	}
+
+	//sched_halt never returns
 	sched_halt();
 }
 
@@ -76,7 +99,7 @@ sched_halt(void)
 		"pushl $0\n"
         // LAB 4:
 		// Uncomment the following line after completing exercise 13
-		//"sti\n"
+		"sti\n"
 		"1:\n"
 		"hlt\n"
 		"jmp 1b\n"

@@ -1,0 +1,47 @@
+Exercise 2:
+
+1. Compare kern/mpentry.S side by side with boot/boot.S. Bearing in mind that kern/mpentry.S is compiled 
+and linked to run above KERNBASE just like everything else in the kernel, what is the purpose of macro MPBOOTPHYS? 
+Why is it necessary in kern/mpentry.S but not in boot/boot.S? In other words, what could go wrong if it were omitted in 
+kern/mpentry.S? Hint: recall the differences between the link address and the load address that we have discussed in Lab 1.
+
+Answer: The MPBOOTPHYS macro in kern/mpentry.S ensures that the kernel code is accessible at low memory addresses, 
+        which is necessary for application processors (APs) running in real mode. In contrast, boot/boot.S operates entirely 
+        within real mode and is already linked to low memory addresses, so it doesn’t require such a mapping. 
+        Without MPBOOTPHYS in mpentry.S, the APs would attempt to execute code at high virtual addresses not yet mapped, 
+        leading to access errors and preventing proper initialization.
+
+Exercise 5:
+
+1. It seems that using the big kernel lock guarantees that only one CPU can run the kernel code at a time. Why do we still 
+need separate kernel stacks for each CPU? Describe a scenario in which using a shared kernel stack will go wrong, even with 
+the protection of the big kernel lock.
+
+Answer: Although the big kernel lock ensures that only one CPU executes kernel code at a time, each CPU still needs its own 
+        kernel stack because interrupts can happen independently on any CPU. If all CPUs shared a single kernel stack, 
+        simultaneous interrupts could overwrite each other’s stack data—like TrapFrames—causing corruption and unpredictable 
+        behavior. This could lead to one CPU mistakenly using another’s data, breaking the expected control flow and system 
+        stability.
+
+Exercise 6:
+
+1. In your implementation of env_run() you should have called lcr3(). Before and after the call to lcr3(), your code makes 
+references (at least it should) to the variable e, the argument to env_run. Upon loading the %cr3 register, the addressing 
+context used by the MMU is instantly changed. But a virtual address (namely e) has meaning relative to a given address 
+context–the address context specifies the physical address to which the virtual address maps. Why can the pointer e be 
+dereferenced both before and after the addressing switch?
+
+Answer: The pointer e can be safely dereferenced both before and after the lcr3() call in env_run() because the kernel's 
+        virtual address space—from UTOP to UVPT—is mapped the same way in every environment. As set up by env_setup_vm(), 
+        this shared mapping ensures that the virtual address for e refers to the same physical location, regardless of the 
+        current page directory. This consistency allows e to remain valid even when the address context changes.
+
+2. Whenever the kernel switches from one environment to another, it must ensure the old environment’s registers are saved 
+so they can be restored properly later. Why? Where does this happen?
+
+Answer: The kernel saves the old environment’s registers during a context switch so the environment can later resume 
+        execution from the exact point it was interrupted. This saving happens in trap.c, where the statement 
+        curenv->env_tf = *tf; copies the trap frame—including all relevant registers—into the environment’s structure. 
+        The registers are first pushed onto the stack during system calls like sys_yield(), and the trap handler captures 
+        them. Later, env_pop_tf() in env_run() restores these registers, allowing the environment to continue as if it was 
+        never paused.
