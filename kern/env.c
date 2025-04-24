@@ -119,7 +119,13 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-
+	env_free_list = NULL;
+	for (int i = NENV-1; i >= 0; i--) {
+		envs[i].env_link=env_free_list;
+		envs[i].env_id=0;
+		envs[i].env_status = ENV_FREE;
+		env_free_list = &envs[i];
+	}
 	// Per-CPU part of the initialization
 	env_init_percpu();
 }
@@ -182,6 +188,13 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
+    e->env_pgdir = (pde_t *)(page2kva(p));
+    // if (!e->env_pgdir)
+    //     panic("env_setup_vm: page allocation failed");
+    // memset(e->env_pgdir, 0, PGSIZE);
+    memcpy(e->env_pgdir, kern_pgdir, PGSIZE);
+    // e->env_cr3 = PADDR(e->env_pgdir);
+	p->pp_ref++;
 
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
@@ -247,7 +260,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
-
+	e->env_tf.tf_eflags |= FL_IF;
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
 
@@ -274,7 +287,28 @@ region_alloc(struct Env *e, void *va, size_t len)
 {
 	// LAB 3: Your code here.
 	// (But only if you need it for load_icode.)
-	//
+
+	// struct PageInfo* page;
+	// void* end = ROUNDUP(va+len, PGSIZE);
+	// for (void* i = ROUNDDOWN(va, PGSIZE); i<end; i+=PGSIZE) {
+	// 	if (!(page=page_alloc(0)))
+	// 		panic("Error: region_alloc function failure\n");
+	// 	page_insert(e->env_pgdir, page, i, PTE_W | PTE_U);
+	// }
+
+    void *start = ROUNDDOWN(va, PGSIZE);
+    void *end = ROUNDUP(va + len, PGSIZE);
+    for (void *addr = start; addr < end; addr += PGSIZE) {
+        struct PageInfo *page = page_alloc(ALLOC_ZERO);
+        if (!page) {
+            panic("(Error) region_alloc page allocation failed\n");
+        }
+		page_insert(e->env_pgdir, page, addr, PTE_U | PTE_W);
+        // if (page_insert(e->env_pgdir, page, addr, PTE_U | PTE_W | PTE_P) < 0) {
+        //     panic("(Error) region_alloc page mapping failed\n");
+        // }
+    }
+
 	// Hint: It is easier to use region_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
@@ -335,11 +369,30 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 
 	// LAB 3: Your code here.
-
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+    struct Elf *elf_hdr = (struct Elf *)binary;
+    // if (elf_hdr->e_magic != ELF_MAGIC) {
+    //     panic("Invalid ELF binary");
+    // }
+
+    struct Proghdr *ph = (struct Proghdr *)(binary + elf_hdr->e_phoff);
+    struct Proghdr *ph_end = ph + elf_hdr->e_phnum;
+	lcr3(PADDR(e->env_pgdir));
+
+    for (; ph < ph_end; ph++) {
+        if (ph->p_type == ELF_PROG_LOAD) {
+            region_alloc(e, (void*)ph->p_va, ph->p_memsz);
+			memcpy((void*)ph->p_va, (void*)binary+ph->p_offset, ph->p_filesz);
+			memset((void*)ph->p_va + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+        }
+
+    }
+    e->env_tf.tf_eip = elf_hdr->e_entry;
+	lcr3(PADDR(kern_pgdir));
+	region_alloc(e, (void*)(USTACKTOP-PGSIZE),PGSIZE);
 }
 
 //
@@ -353,7 +406,12 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
-
+	struct Env *e;
+    int ealloc = env_alloc(&e, 0);
+	if (ealloc < 0)
+		panic("Error: env_create function failure\n");
+    load_icode(e, binary);
+    e->env_type = type;
 	// If this is the file server (type == ENV_TYPE_FS) give it I/O privileges.
 	// LAB 5: Your code here.
 }
@@ -486,7 +544,16 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
+	//Set curr env back to ENV_RUNNABLE if running
+	if (curenv && curenv->env_status == ENV_RUNNING) {
+		curenv->env_status = ENV_RUNNABLE;
+	}
+	//Set curenv to new env
+	curenv = e;
+	e->env_status = ENV_RUNNING;
+	e->env_runs++;
+	lcr3(PADDR(e->env_pgdir));
 
-	panic("env_run not yet implemented");
+	unlock_kernel();
+    env_pop_tf(&e->env_tf);
 }
-

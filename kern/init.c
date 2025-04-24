@@ -17,35 +17,54 @@
 
 static void boot_aps(void);
 
+// //Extra Credit 2 (lab 3)
+// void sysenter_handler(void);
+// #include <inc/x86.h>
+// #define MSR_SYSENTER_CS  0x174
+// #define MSR_SYSENTER_ESP 0x175
+// #define MSR_SYSENTER_EIP 0x176
+
+// static void
+// init_sysenter(void)
+// {
+//     //set up MSRs needed for sysenter
+//     wrmsr(MSR_SYSENTER_CS, GD_KT);                //kernel code segment
+//     wrmsr(MSR_SYSENTER_ESP, KSTACKTOP);           //kernel stack
+//     wrmsr(MSR_SYSENTER_EIP, (uint32_t)sysenter_handler); //entry point
+// }
 
 void
 i386_init(void)
 {
-	// Initialize the console.
-	// Can't call cprintf until after we do this!
-	cons_init();
+	//Initialize the console.
+    //Can't call cprintf until after we do this!
+    cons_init();
 
-	cprintf("444544 decimal is %o octal!\n", 444544);
+    cprintf("444544 decimal is %o octal!\n", 444544);
 
-	// Lab 2 memory management initialization functions
-	mem_init();
+    // Lab 2 memory management initialization functions
+    mem_init();
 
-	// Lab 3 user environment initialization functions
-	env_init();
-	trap_init();
+    // Extra Credit 2 (lab 3)
+    // init_sysenter();
 
-	// Lab 4 multiprocessor initialization functions
-	mp_init();
-	lapic_init();
+    // Lab 3 user environment initialization functions
+    env_init();
+    trap_init();
 
-	// Lab 4 multitasking initialization functions
-	pic_init();
+    // Lab 4 multiprocessor initialization functions
+    mp_init();
+    lapic_init();
 
-	// Acquire the big kernel lock before waking up APs
-	// Your code here:
+    //Lab 4 multitasking initialization functions
+    pic_init();
 
-	// Starting non-boot CPUs
-	boot_aps();
+    // Acquire the big kernel lock before waking up APs
+    // Your code here:
+    lock_kernel();
+
+    // Starting non-boot CPUs
+    boot_aps();
 
 	// Start fs.
 	ENV_CREATE(fs_fs, ENV_TYPE_FS);
@@ -61,8 +80,8 @@ i386_init(void)
 	// Should not be necessary - drains keyboard because interrupt has given up.
 	kbd_intr();
 
-	// Schedule and run the first user environment!
-	sched_yield();
+    // Schedule and run the first user environment!
+    sched_yield();
 }
 
 // While boot_aps is booting a given CPU, it communicates the per-core
@@ -116,8 +135,11 @@ mp_main(void)
 	//
 	// Your code here:
 
+	lock_kernel();
+    sched_yield();
+
 	// Remove this after you finish Exercise 6
-	for (;;);
+	//for (;;);
 }
 
 /*

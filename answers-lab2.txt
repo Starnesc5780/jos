@@ -1,0 +1,47 @@
+Lab 2 Write-up
+
+Exercise 3:
+Question: Assuming that the following JOS kernel code is correct, what type should variable x have, uintptr_t or physaddr_t?
+Answer: Variable x should be uintptr_t because return_a_pointer() returns a virtual address thus the value is a virtual address type.
+
+Exercise 5:
+a. What entries (rows) in the page directory have been filled in at this point? What addresses do they map and where do they point?
+Answer: 
+    +-----+----------------------+---------------------------------------+
+    |Entry| Base Virtual Address |  Points to (logically)                |
+    +=====+======================+=======================================+
+    |1023 | 0xFFC00000           | Page table for top 4MB of phys memory |
+    +-----+----------------------+---------------------------------------+
+    |1022 | 0xFF800000           | Second to last page table             |
+    +-----+----------------------+---------------------------------------+
+    |.    | ?                    | ?                                     |
+    +-----+----------------------+---------------------------------------+
+    |.    | ?                    | ?                                     |
+    +-----+----------------------+---------------------------------------+
+    |.    | ?                    | ?                                     |
+    +-----+----------------------+---------------------------------------+
+    |2    | 0x00800000           | Maps phys mem starting at 8MB         |
+    +-----+----------------------+---------------------------------------+
+    |1    | 0x00400000           | Maps phys mem starting at 4MB         |
+    +-----+----------------------+---------------------------------------+
+    |0    | 0x00000000           | [see next question]                   |
+    +-----+----------------------+---------------------------------------+
+
+b. We have placed the kernel and user environment in the same address space. Why will user programs not be able to read or write the kernel's memory? What specific mechanisms protect the kernel memory?
+Answer: The disabling of the PTE_U bit in the page table protects the kernel memory from user programs.
+
+c. What is the maximum amount of physical memory that this operating system can support? Why?
+Answer: The kernel address space is the range of memory allocated for the system. Since the range is 0xf0000000->0xffffffff, this leaves the maximum at 256MB.
+
+d. How much space overhead is there for managing memory, if we actually had the maximum amount of physical memory? How is this overhead broken down?
+Answer: The overhead needs to account for PageInfo structs (4MB), page directory (4KB), and page table entries (2MB), totaling 4MB+2MB+4KB.
+
+e. Revisit the page table setup in kern/entry.S and kern/entrypgdir.c. 
+Immediately after we turn on paging, EIP is still a low number (a little over 1MB). 
+At what point do we transition to running at an EIP above KERNBASE? 
+What makes it possible for us to continue executing at a low EIP between when we enable paging and when we begin running at an EIP above KERNBASE? 
+Why is this transition necessary?
+Answer: 
+The transition to running at an EIP above KERNBASE occurs in entry.S with the instruction "jmp *%eax", which is at the end of "entry:" right before "relocated:" (when reading the file).
+What makes it possible is that the mapping for the first 4MB in entry_pgdir in virtual and physical memory.
+
